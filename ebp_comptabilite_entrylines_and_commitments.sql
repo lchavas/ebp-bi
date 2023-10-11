@@ -31,17 +31,17 @@ SELECT
   END AS TypeEcheance,
   DATEPART(qq,Commitment.DueLineDate) as QuarterEcheance,
   DATEPART(ISO_WEEK,Commitment.DueLineDate) as SemaineEcheance,
-  DATEDIFF(dd, '{{ url_param('datebalance') }}', Commitment.DueLineDate) AS joursRestantAvantEcheance,
+  DATEDIFF(dd, GETDATE(), Commitment.DueLineDate) AS joursRestantAvantEcheance,
   /* Now the amounts commited in increments of 30 days */
   CASE WHEN Commitment.DueLineDate IS NULL THEN (EntryLine.Debit - EntryLine.Credit) ELSE 0 END AS MontantSansEcheance,
-  CASE WHEN DATEDIFF(dd, '{{ url_param('datebalance') }}', Commitment.DueLineDate) < -90 THEN (EntryLine.Debit - EntryLine.Credit) ELSE 0 END AS MontantEchuPlus90Jours,
-  CASE WHEN DATEDIFF(dd, '{{ url_param('datebalance') }}', Commitment.DueLineDate) BETWEEN -90 AND -61 THEN (EntryLine.Debit - EntryLine.Credit) ELSE 0 END AS MontantEchu90Jours,
-  CASE WHEN DATEDIFF(dd, '{{ url_param('datebalance') }}', Commitment.DueLineDate) BETWEEN -60 AND -31 THEN (EntryLine.Debit - EntryLine.Credit) ELSE 0 END AS MontantEchu60Jours,
-  CASE WHEN DATEDIFF(dd, '{{ url_param('datebalance') }}', Commitment.DueLineDate) BETWEEN -30 AND -1 THEN (EntryLine.Debit - EntryLine.Credit) ELSE 0 END AS MontantEchu30Jours,
-  CASE WHEN DATEDIFF(dd, '{{ url_param('datebalance') }}', Commitment.DueLineDate) BETWEEN 0 AND 30 THEN (EntryLine.Debit - EntryLine.Credit) ELSE 0 END AS MontantAEchoir30Jours,
-  CASE WHEN DATEDIFF(dd, '{{ url_param('datebalance') }}', Commitment.DueLineDate) BETWEEN 31 AND 60 THEN (EntryLine.Debit - EntryLine.Credit) ELSE 0 END AS MontantAEchoir60Jours,
-  CASE WHEN DATEDIFF(dd, '{{ url_param('datebalance') }}', Commitment.DueLineDate) BETWEEN 61 AND 90 THEN (EntryLine.Debit - EntryLine.Credit) ELSE 0 END AS MontantAEchoir90Jours,
-  CASE WHEN DATEDIFF(dd, '{{ url_param('datebalance') }}', Commitment.DueLineDate) > 90 THEN (EntryLine.Debit - EntryLine.Credit) ELSE 0 END AS MontantAEchoirPlus90Jours,
+  CASE WHEN DATEDIFF(dd, GETDATE(), Commitment.DueLineDate) < -90 THEN (EntryLine.Debit - EntryLine.Credit) ELSE 0 END AS MontantEchuPlus90Jours,
+  CASE WHEN DATEDIFF(dd, GETDATE(), Commitment.DueLineDate) BETWEEN -90 AND -61 THEN (EntryLine.Debit - EntryLine.Credit) ELSE 0 END AS MontantEchu90Jours,
+  CASE WHEN DATEDIFF(dd, GETDATE(), Commitment.DueLineDate) BETWEEN -60 AND -31 THEN (EntryLine.Debit - EntryLine.Credit) ELSE 0 END AS MontantEchu60Jours,
+  CASE WHEN DATEDIFF(dd, GETDATE(), Commitment.DueLineDate) BETWEEN -30 AND -1 THEN (EntryLine.Debit - EntryLine.Credit) ELSE 0 END AS MontantEchu30Jours,
+  CASE WHEN DATEDIFF(dd, GETDATE(), Commitment.DueLineDate) BETWEEN 0 AND 30 THEN (EntryLine.Debit - EntryLine.Credit) ELSE 0 END AS MontantAEchoir30Jours,
+  CASE WHEN DATEDIFF(dd, GETDATE(), Commitment.DueLineDate) BETWEEN 31 AND 60 THEN (EntryLine.Debit - EntryLine.Credit) ELSE 0 END AS MontantAEchoir60Jours,
+  CASE WHEN DATEDIFF(dd, GETDATE(), Commitment.DueLineDate) BETWEEN 61 AND 90 THEN (EntryLine.Debit - EntryLine.Credit) ELSE 0 END AS MontantAEchoir90Jours,
+  CASE WHEN DATEDIFF(dd, GETDATE(), Commitment.DueLineDate) > 90 THEN (EntryLine.Debit - EntryLine.Credit) ELSE 0 END AS MontantAEchoirPlus90Jours,
   Commitment.Amount as MontantEcheance,
   Commitment.ChargedAmount as MontantPayeEcheance,
   Commitment.Solde as SoldeEcheance,
@@ -58,10 +58,10 @@ FROM EntryLine
   /*Left Outer Join AuxAccount On EntryLine.AuxiliaryAccountNumber = AuxAccount.AccountNumber */
 WHERE 
 /* Calcul du 1er Avril avant et du 31 Mars après la date spécifiée afin de ne considérer que les écritures de l'exercice comptable */
-EntryLine.EntryLineDate BETWEEN CAST(CASE WHEN DATEPART(MONTH, '{{ url_param('datebalance') }}') < 4 THEN CONCAT(DATEPART(YEAR, DATEADD(YY,-1,'{{ url_param('datebalance') }}')),'0401') ELSE CONCAT(DATEPART(YEAR, '{{ url_param('datebalance') }}'),'0401') END AS DATE) AND CAST('{{ url_param('datebalance') }}' AS DATE)
+EntryLine.EntryLineDate BETWEEN CAST(CASE WHEN DATEPART(MONTH, GETDATE()) < 4 THEN CONCAT(DATEPART(YEAR, DATEADD(YY,-1,GETDATE())),'0401') ELSE CONCAT(DATEPART(YEAR, GETDATE()),'0401') END AS DATE) AND CAST(GETDATE() AS DATE)
 /* Ecritures Lettrées ou Non Lettrées, mais pas lettrées partiellement */
 AND Entryline.ApplyingType IN (0,1)
 AND (/* Ecriture pas encore lettrée */ Entryline.ApplyingDate IS NULL 
-	 /* Ecriture qui sera lettrée dans le futur de la date spécifiée */
-	 OR Entryline.ApplyingDate > '{{ url_param('datebalance') }}')
+	 /* Ecriture qui sera lettrée dans le futur  */
+	 OR Entryline.ApplyingDate > GETDATE())
 AND SUBSTRING(Account.AccountNumber,1,3) = '411'
